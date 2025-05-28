@@ -1,0 +1,1402 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>유희왕 카드게임</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: white;
+            overflow-x: hidden;
+        }
+
+        .container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
+        .screen {
+            display: none;
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            padding: 20px;
+        }
+
+        .screen.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 대시보드 */
+        .dashboard {
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .dashboard h1 {
+            font-size: 3em;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .menu-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            font-size: 1.2em;
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            cursor: pointer;
+            transition: transform 0.3s;
+            min-width: 200px;
+        }
+
+        .btn:hover {
+            transform: scale(1.05);
+        }
+
+        .btn:disabled {
+            background: #7f8c8d;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn.bonus {
+            background: linear-gradient(45deg, #f39c12, #e67e22);
+        }
+
+        .game-info {
+            display: flex;
+            gap: 30px;
+            font-size: 1.1em;
+        }
+
+        /* 카드 뽑기 화면 */
+        .pack-opening {
+            text-align: center;
+            justify-content: center;
+        }
+
+        .pack-opening h2 {
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+
+        .pack-container {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 20px;
+            margin: 30px auto;
+            max-width: 800px;
+        }
+
+        .pack {
+            width: 120px;
+            height: 180px;
+            background: linear-gradient(45deg, #8e44ad, #3498db);
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            transition: transform 0.3s;
+            margin: 0 auto;
+        }
+
+        .pack:hover {
+            transform: scale(1.1);
+        }
+
+        .pack.opened {
+            background: #34495e;
+            cursor: not-allowed;
+        }
+
+        /* 보너스 팩 화면 */
+        .bonus-pack {
+            text-align: center;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .bonus-pack h2 {
+            color: #f39c12;
+            font-size: 2.5em;
+            margin-bottom: 30px;
+        }
+
+        .single-pack {
+            width: 200px;
+            height: 300px;
+            background: linear-gradient(45deg, #f39c12, #e67e22);
+            border-radius: 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.5em;
+            transition: transform 0.3s;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        }
+
+        .single-pack:hover {
+            transform: scale(1.1);
+        }
+
+        /* 스테이지 선택 */
+        .stage-select {
+            text-align: center;
+            justify-content: center;
+        }
+
+        .stage-select h2 {
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+
+        .stage-selector {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 20px;
+            max-width: 800px;
+            margin: 30px auto;
+        }
+
+        .stage-btn {
+            padding: 20px;
+            background: linear-gradient(45deg, #16a085, #27ae60);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+
+        .stage-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .stage-btn:disabled {
+            background: #7f8c8d;
+            cursor: not-allowed;
+        }
+
+        /* 배틀 화면 */
+        .battle {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            padding: 10px;
+        }
+
+        .battle-info {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+
+        .phase-indicator {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 10px 20px;
+            border-radius: 20px;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        /* 유희왕 테이블 */
+        .duel-table {
+            background: linear-gradient(45deg, #27ae60, #2ecc71);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 10px 0;
+            border: 3px solid #1e8449;
+            flex: 1;
+        }
+
+        .field-side {
+            margin: 20px 0;
+        }
+
+        .field-label {
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+
+        .field-zones {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin: 10px 0;
+        }
+
+        .zone {
+            width: 80px;
+            height: 120px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8em;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            text-align: center;
+        }
+
+        .zone:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+        }
+
+        .zone.monster-zone {
+            border-color: #e74c3c;
+        }
+
+        .zone.spell-trap-zone {
+            border-color: #3498db;
+        }
+
+        .zone.selected {
+            border-color: #f1c40f;
+            background: rgba(241, 196, 15, 0.3);
+            box-shadow: 0 0 15px rgba(241, 196, 15, 0.7);
+        }
+
+        .zone.occupied {
+            background: rgba(46, 204, 113, 0.3);
+        }
+
+        .card {
+            width: 78px;
+            height: 118px;
+            background: linear-gradient(45deg, #f39c12, #e67e22);
+            border-radius: 8px;
+            border: 2px solid #d35400;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7em;
+            text-align: center;
+            padding: 3px;
+            transition: transform 0.3s;
+            position: relative;
+            user-select: none;
+        }
+
+        .card:hover {
+            transform: scale(1.05);
+        }
+
+        .card.monster {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+        }
+
+        .card.magic {
+            background: linear-gradient(45deg, #3498db, #2980b9);
+        }
+
+        .card.trap {
+            background: linear-gradient(45deg, #9b59b6, #8e44ad);
+        }
+
+        .card.selected {
+            border: 3px solid #f1c40f;
+            box-shadow: 0 0 15px rgba(241, 196, 15, 0.7);
+        }
+
+        .hand {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding: 10px;
+            min-height: 140px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            margin: 10px 0;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin: 10px 0;
+        }
+
+        .battle-log {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            height: 80px;
+            overflow-y: auto;
+            font-size: 0.9em;
+        }
+
+        /* 카드 공개 오버레이 */
+        .card-reveal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .card-reveal-container {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 80%;
+        }
+
+        .card-reveal {
+            width: 150px;
+            height: 220px;
+            position: relative;
+            cursor: pointer;
+            perspective: 1000px;
+        }
+
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.8s;
+            transform-style: preserve-3d;
+        }
+
+        .card-reveal.flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        .card-back {
+            background: linear-gradient(45deg, #8e44ad, #3498db);
+            color: white;
+            font-weight: bold;
+        }
+
+        .card-front {
+            background: linear-gradient(45deg, #f39c12, #e67e22);
+            transform: rotateY(180deg);
+            color: white;
+        }
+
+        .card-front.monster {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+        }
+
+        .card-front.magic {
+            background: linear-gradient(45deg, #3498db, #2980b9);
+        }
+
+        .card-front.trap {
+            background: linear-gradient(45deg, #9b59b6, #8e44ad);
+        }
+
+        .card-illustration {
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2em;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1.1em;
+            z-index: 1001;
+        }
+
+        /* 카드 선택 모달 */
+        .card-select-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .card-select-container {
+            background: rgba(52, 73, 94, 0.9);
+            border-radius: 15px;
+            padding: 20px;
+            max-width: 80%;
+            max-height: 80%;
+            overflow-y: auto;
+        }
+
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 대시보드 화면 (기본 화면) -->
+        <div class="screen dashboard active" id="dashboard">
+            <h1>유희왕 듀얼 몬스터즈</h1>
+            <div class="menu-buttons">
+                <button class="btn" onclick="showScreen('pack-opening')">기본 카드 뽑기</button>
+                <button class="btn bonus" onclick="showScreen('bonus-pack')" id="bonusPackBtn" style="display:none;">보너스 팩 오픈</button>
+                <button class="btn" onclick="showScreen('stage-select')">듀얼 시작</button>
+                <button class="btn" onclick="showCollection()">카드 컬렉션</button>
+            </div>
+            <div class="game-info">
+                <div>소지 카드: <span id="cardCount">0</span>장</div>
+                <div>클리어 스테이지: <span id="clearedStages">0</span>/10</div>
+                <div>보너스 팩: <span id="bonusPackCount">0</span>개</div>
+            </div>
+        </div>
+
+        <!-- 기본 카드 뽑기 화면 -->
+        <div class="screen pack-opening" id="pack-opening">
+            <h2>기본 카드 팩 오픈</h2>
+            <div class="pack-container" id="packContainer">
+                <!-- 팩들이 여기에 생성됩니다 -->
+            </div>
+            <button class="btn" onclick="showScreen('dashboard')">돌아가기</button>
+        </div>
+
+        <!-- 보너스 팩 화면 -->
+        <div class="screen bonus-pack" id="bonus-pack">
+            <h2>🎁 보너스 팩 오픈 🎁</h2>
+            <p style="font-size: 1.2em; margin-bottom: 30px;">승리 보상으로 받은 특별한 팩입니다!</p>
+            <div class="single-pack" id="bonusPack" onclick="openBonusPack()">
+                <div>
+                    <div style="font-size: 1.5em;">🏆</div>
+                    <div>보너스 팩</div>
+                    <div style="font-size: 0.8em;">클릭하여 오픈</div>
+                </div>
+            </div>
+            <button class="btn" onclick="showScreen('dashboard')">돌아가기</button>
+        </div>
+
+        <!-- 스테이지 선택 화면 -->
+        <div class="screen stage-select" id="stage-select">
+            <h2>스테이지 선택</h2>
+            <div class="stage-selector" id="stageSelector">
+                <!-- 스테이지 버튼들이 여기에 생성됩니다 -->
+            </div>
+            <button class="btn" onclick="showScreen('dashboard')">돌아가기</button>
+        </div>
+
+        <!-- 대결 화면 -->
+        <div class="screen battle" id="battle">
+            <div class="battle-info">
+                <div>상대 LP: <span id="opponentLP">8000</span></div>
+                <div>스테이지: <span id="currentStage">1</span></div>
+                <div>내 LP: <span id="playerLP">8000</span></div>
+            </div>
+
+            <div class="phase-indicator" id="phaseIndicator">내 턴</div>
+
+            <!-- 유희왕 듀얼 테이블 -->
+            <div class="duel-table">
+                <!-- 상대 영역 -->
+                <div class="field-side">
+                    <div class="field-label">상대 필드</div>
+                    
+                    <!-- 상대 마법/함정 존 -->
+                    <div class="field-zones" id="opponentSpellTrapZones">
+                        <!-- 상대 마법/함정 존들 -->
+                    </div>
+                    
+                    <!-- 상대 몬스터 존 -->
+                    <div class="field-zones" id="opponentMonsterZones">
+                        <!-- 상대 몬스터 존들 -->
+                    </div>
+                </div>
+
+                <!-- 배틀 로그 -->
+                <div class="battle-log" id="battleLog">
+                    게임이 시작되었습니다!<br>
+                </div>
+
+                <!-- 플레이어 영역 -->
+                <div class="field-side">
+                    <div class="field-label">내 필드</div>
+                    
+                    <!-- 플레이어 몬스터 존 -->
+                    <div class="field-zones" id="playerMonsterZones">
+                        <!-- 플레이어 몬스터 존들 -->
+                    </div>
+                    
+                    <!-- 플레이어 마법/함정 존 -->
+                    <div class="field-zones" id="playerSpellTrapZones">
+                        <!-- 플레이어 마법/함정 존들 -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- 컨트롤 -->
+            <div class="controls">
+                <button class="btn" onclick="endTurn()" id="endTurnBtn">내 턴 종료</button>
+                <button class="btn" onclick="directAttack()" id="directAttackBtn" style="display:none;">직접 공격</button>
+                <button class="btn" onclick="showScreen('dashboard')">게임 종료</button>
+            </div>
+
+            <!-- 플레이어 패 -->
+            <div class="hand" id="playerHand">
+                <!-- 플레이어의 카드들이 여기에 표시됩니다 -->
+            </div>
+        </div>
+
+        <!-- 카드 공개 오버레이 -->
+        <div class="card-reveal-overlay" id="cardRevealOverlay">
+            <button class="close-btn" onclick="closeCardReveal()">닫기</button>
+            <div class="card-reveal-container" id="cardRevealContainer">
+                <!-- 뽑은 카드들이 여기에 표시됩니다 -->
+            </div>
+        </div>
+
+        <!-- 카드 선택 모달 -->
+        <div class="card-select-modal" id="cardSelectModal">
+            <div class="card-select-container">
+                <h3>카드를 선택하세요</h3>
+                <button class="close-btn" onclick="closeCardSelect()">닫기</button>
+                <div class="card-grid" id="cardSelectGrid">
+                    <!-- 선택 가능한 카드들이 여기에 표시됩니다 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 게임 상태 관리
+        let gameState = {
+            playerLP: 8000,
+            opponentLP: 8000,
+            playerHand: [],
+            playerDeck: [],
+            playerMonsterField: [null, null, null, null, null],
+            playerSpellTrapField: [null, null, null, null, null],
+            opponentHand: [],
+            opponentDeck: [],
+            opponentMonsterField: [null, null, null, null, null],
+            opponentSpellTrapField: [null, null, null, null, null],
+            currentPhase: 'main',
+            turn: 'player',
+            currentStage: 1,
+            clearedStages: 0,
+            collection: [],
+            packsOpened: 0,
+            bonusPackCount: 0,
+            selectedCard: null,
+            selectedZone: null,
+            canSummon: true
+        };
+
+        // 카드 데이터베이스
+        const cardDatabase = [
+            {id: 1, name: '푸른 눈의 백룡', type: 'monster', attack: 3000, defense: 2500, level: 8, illustration: '🐉', description: '전설의 백룡. 압도적인 파괴력을 자랑한다.'},
+            {id: 2, name: '블랙 매지션', type: 'monster', attack: 2500, defense: 2100, level: 7, illustration: '🧙‍♂️', description: '어둠의 마법을 다루는 마법사.'},
+            {id: 3, name: '엘프의 검사', type: 'monster', attack: 1400, defense: 1200, level: 4, illustration: '🧝‍♀️', description: '숲을 지키는 엘프 전사.'},
+            {id: 4, name: '암흑기사 가이아', type: 'monster', attack: 2300, defense: 2100, level: 7, illustration: '⚔️', description: '어둠의 힘을 가진 기사.'},
+            {id: 5, name: '저주받은 용', type: 'monster', attack: 2000, defense: 1500, level: 5, illustration: '🐲', description: '저주에 걸린 사악한 용.'},
+            {id: 6, name: '고블린 어택 포스', type: 'monster', attack: 2300, defense: 0, level: 4, illustration: '👹', description: '공격에 특화된 고블린 부대.'},
+            {id: 7, name: '젬나이트 가넷', type: 'monster', attack: 1900, defense: 0, level: 4, illustration: '💎', description: '보석의 힘을 가진 전사.'},
+            {id: 8, name: '번개', type: 'magic', effect: '몬스터 1체를 파괴한다', illustration: '⚡', description: '강력한 번개로 적을 파괴한다.'},
+            {id: 9, name: '어둠의 구멍', type: 'magic', effect: '상대 필드의 몬스터를 모두 파괴한다', illustration: '🕳️', description: '모든 것을 삼키는 어둠의 구멍.'},
+            {id: 10, name: '강화', type: 'magic', effect: '몬스터의 공격력을 1000 올린다', illustration: '💪', description: '몬스터의 힘을 강화시킨다.'},
+            {id: 11, name: '미러 포스', type: 'trap', effect: '상대의 공격을 무효화하고 공격 몬스터를 파괴한다', illustration: '🛡️', description: '공격을 반사하는 함정.'},
+            {id: 12, name: '함정 구멍', type: 'trap', effect: '공격력 1000 이상의 몬스터를 파괴한다', illustration: '🕳️', description: '강력한 몬스터를 함정에 빠뜨린다.'}
+        ];
+
+        // 화면 전환 함수
+        function showScreen(screenId) {
+            // 모든 화면 숨기기
+            document.querySelectorAll('.screen').forEach(screen => {
+                screen.classList.remove('active');
+            });
+            
+            // 선택된 화면 보이기
+            document.getElementById(screenId).classList.add('active');
+            
+            // 화면별 초기화
+            if (screenId === 'pack-opening') {
+                initPackOpening();
+            } else if (screenId === 'stage-select') {
+                initStageSelect();
+            } else if (screenId === 'bonus-pack') {
+                updateBonusPackDisplay();
+            } else if (screenId === 'dashboard') {
+                updateUI();
+            }
+        }
+
+        // 기본 카드 팩 오픈 초기화
+        function initPackOpening() {
+            const container = document.getElementById('packContainer');
+            container.innerHTML = '';
+            
+            for (let i = 0; i < 10; i++) {
+                const pack = document.createElement('div');
+                pack.className = gameState.packsOpened > i ? 'pack opened' : 'pack';
+                pack.textContent = gameState.packsOpened > i ? '오픈됨' : `팩 ${i + 1}`;
+                if (gameState.packsOpened <= i) {
+                    pack.onclick = () => openPack(i, pack);
+                }
+                container.appendChild(pack);
+            }
+        }
+
+        // 보너스 팩 표시 업데이트
+        function updateBonusPackDisplay() {
+            const bonusPack = document.getElementById('bonusPack');
+            const bonusBtn = document.getElementById('bonusPackBtn');
+            
+            if (gameState.bonusPackCount > 0) {
+                bonusBtn.style.display = 'block';
+                bonusPack.style.display = 'flex';
+            } else {
+                bonusBtn.style.display = 'none';
+                bonusPack.innerHTML = '<div><div style="font-size: 1.5em;">❌</div><div>보너스 팩 없음</div></div>';
+            }
+        }
+
+        // 기본 팩 오픈 함수
+        function openPack(packIndex, packElement) {
+            if (packElement.classList.contains('opened')) return;
+            
+            packElement.classList.add('opened');
+            packElement.textContent = '오픈됨';
+            gameState.packsOpened++;
+            
+            // 랜덤 카드 5장 지급
+            const newCards = [];
+            for (let i = 0; i < 5; i++) {
+                const randomCard = cardDatabase[Math.floor(Math.random() * cardDatabase.length)];
+                const cardCopy = {...randomCard, uniqueId: Date.now() + Math.random()};
+                gameState.collection.push(cardCopy);
+                newCards.push(cardCopy);
+            }
+            
+            updateUI();
+            showCardReveal(newCards);
+        }
+
+        // 보너스 팩 오픈 함수
+        function openBonusPack() {
+            if (gameState.bonusPackCount <= 0) {
+                alert('보너스 팩이 없습니다.');
+                return;
+            }
+            
+            gameState.bonusPackCount--;
+            
+            // 보너스 팩은 더 좋은 카드들로 구성
+            const newCards = [];
+            for (let i = 0; i < 7; i++) {
+                const randomCard = cardDatabase[Math.floor(Math.random() * cardDatabase.length)];
+                const cardCopy = {...randomCard, uniqueId: Date.now() + Math.random()};
+                // 보너스 팩에서는 스탯이 향상
+                if (cardCopy.attack) {
+                    cardCopy.attack += Math.floor(Math.random() * 300) + 100;
+                }
+                if (cardCopy.defense) {
+                    cardCopy.defense += Math.floor(Math.random() * 200) + 50;
+                }
+                gameState.collection.push(cardCopy);
+                newCards.push(cardCopy);
+            }
+            
+            updateUI();
+            showCardReveal(newCards);
+            updateBonusPackDisplay();
+        }
+
+        // 카드 공개 애니메이션
+        function showCardReveal(cards) {
+            const overlay = document.getElementById('cardRevealOverlay');
+            const container = document.getElementById('cardRevealContainer');
+            
+            container.innerHTML = '';
+            
+            cards.forEach((card, index) => {
+                const cardReveal = document.createElement('div');
+                cardReveal.className = 'card-reveal';
+                cardReveal.innerHTML = `
+                    <div class="card-inner">
+                        <div class="card-back">
+                            <div>유희왕</div>
+                            <div>카드</div>
+                        </div>
+                        <div class="card-front ${card.type}">
+                            <div class="card-illustration">${card.illustration}</div>
+                            <div style="font-weight: bold; font-size: 0.9em; margin-bottom: 5px;">${card.name}</div>
+                            ${card.attack ? `<div style="font-size: 0.8em;">ATK: ${card.attack}</div>` : ''}
+                            ${card.defense ? `<div style="font-size: 0.8em;">DEF: ${card.defense}</div>` : ''}
+                            <div style="font-size: 0.7em; margin-top: 5px; text-align: center;">${card.description}</div>
+                        </div>
+                    </div>
+                `;
+                
+                cardReveal.onclick = () => {
+                    cardReveal.classList.add('flipped');
+                };
+                
+                container.appendChild(cardReveal);
+                
+                // 자동으로 순차적으로 뒤집기
+                setTimeout(() => {
+                    cardReveal.classList.add('flipped');
+                }, index * 500);
+            });
+            
+            overlay.style.display = 'flex';
+        }
+
+        // 카드 공개 닫기
+        function closeCardReveal() {
+            document.getElementById('cardRevealOverlay').style.display = 'none';
+        }
+
+        // 스테이지 선택 초기화
+        function initStageSelect() {
+            const container = document.getElementById('stageSelector');
+            container.innerHTML = '';
+            
+            for (let i = 1; i <= 10; i++) {
+                const btn = document.createElement('button');
+                btn.className = 'stage-btn';
+                btn.textContent = `스테이지 ${i}`;
+                btn.disabled = i > gameState.clearedStages + 1 || gameState.collection.length < 10;
+                if (gameState.collection.length < 10) {
+                    btn.title = '최소 10장의 카드가 필요합니다';
+                }
+                btn.onclick = () => startBattle(i);
+                container.appendChild(btn);
+            }
+        }
+
+        // 배틀 시작
+        function startBattle(stage) {
+            if (gameState.collection.length < 10) {
+                alert('카드가 부족합니다. 최소 10장의 카드가 필요합니다.');
+                return;
+            }
+
+            gameState.currentStage = stage;
+            gameState.playerLP = 8000;
+            gameState.opponentLP = 8000 + (stage - 1) * 1000;
+            gameState.turn = 'player';
+            gameState.canSummon = true;
+            gameState.selectedCard = null;
+            gameState.selectedZone = null;
+            
+            // 필드 초기화
+            gameState.playerMonsterField = [null, null, null, null, null];
+            gameState.playerSpellTrapField = [null, null, null, null, null];
+            gameState.opponentMonsterField = [null, null, null, null, null];
+            gameState.opponentSpellTrapField = [null, null, null, null, null];
+            
+            // 덱 구성
+            gameState.playerDeck = [...gameState.collection].slice(0, 20);
+            gameState.opponentDeck = [];
+            
+            // 상대 덱 구성
+            for (let i = 0; i < 20; i++) {
+                const baseCard = cardDatabase[Math.floor(Math.random() * cardDatabase.length)];
+                const enhancedCard = {...baseCard, uniqueId: Date.now() + Math.random()};
+                if (enhancedCard.attack) {
+                    enhancedCard.attack += (stage - 1) * 200;
+                }
+                gameState.opponentDeck.push(enhancedCard);
+            }
+            
+            gameState.playerHand = [];
+            gameState.opponentHand = [];
+            
+            // 초기 패 드로우
+            for (let i = 0; i < 5; i++) {
+                drawCard('player');
+                drawCard('opponent');
+            }
+            
+            showScreen('battle');
+            initBattleField();
+            updateBattleUI();
+            addBattleLog(`스테이지 ${stage} 시작! 상대 LP: ${gameState.opponentLP}`);
+        }
+
+        // 배틀 필드 초기화
+        function initBattleField() {
+            // 플레이어 몬스터 존 생성
+            const playerMonsterZones = document.getElementById('playerMonsterZones');
+            playerMonsterZones.innerHTML = '';
+            for (let i = 0; i < 5; i++) {
+                const zone = document.createElement('div');
+                zone.className = 'zone monster-zone';
+                zone.textContent = '몬스터 존';
+                zone.onclick = () => selectZone('player', 'monster', i);
+                playerMonsterZones.appendChild(zone);
+            }
+
+            // 플레이어 마법/함정 존 생성
+            const playerSpellTrapZones = document.getElementById('playerSpellTrapZones');
+            playerSpellTrapZones.innerHTML = '';
+            for (let i = 0; i < 5; i++) {
+                const zone = document.createElement('div');
+                zone.className = 'zone spell-trap-zone';
+                zone.textContent = '마법/함정';
+                zone.onclick = () => selectZone('player', 'spell', i);
+                playerSpellTrapZones.appendChild(zone);
+            }
+
+            // 상대 몬스터 존 생성
+            const opponentMonsterZones = document.getElementById('opponentMonsterZones');
+            opponentMonsterZones.innerHTML = '';
+            for (let i = 0; i < 5; i++) {
+                const zone = document.createElement('div');
+                zone.className = 'zone monster-zone';
+                zone.textContent = '몬스터 존';
+                zone.onclick = () => attackMonster(i);
+                opponentMonsterZones.appendChild(zone);
+            }
+
+            // 상대 마법/함정 존 생성
+            const opponentSpellTrapZones = document.getElementById('opponentSpellTrapZones');
+            opponentSpellTrapZones.innerHTML = '';
+            for (let i = 0; i < 5; i++) {
+                const zone = document.createElement('div');
+                zone.className = 'zone spell-trap-zone';
+                zone.textContent = '마법/함정';
+                opponentSpellTrapZones.appendChild(zone);
+            }
+        }
+
+        // 존 선택 함수
+        function selectZone(player, zoneType, index) {
+            if (gameState.turn !== 'player') {
+                alert('당신의 턴이 아닙니다.');
+                return;
+            }
+            
+            // 이미 카드가 있는 존인지 확인
+            const field = zoneType === 'monster' ? gameState.playerMonsterField : gameState.playerSpellTrapField;
+            if (field[index]) {
+                // 이미 있는 카드 선택 (공격용)
+                if (zoneType === 'monster') {
+                    gameState.selectedCard = field[index];
+                    updateBattleUI();
+                    addBattleLog(`${gameState.selectedCard.name}을(를) 선택했습니다. 공격할 대상을 선택하세요.`);
+                }
+                return;
+            }
+            
+            gameState.selectedZone = { player, zoneType, index };
+            
+            // 존 하이라이트
+            document.querySelectorAll('.zone').forEach(zone => zone.classList.remove('selected'));
+            const zoneElement = document.querySelector(`#player${zoneType === 'monster' ? 'Monster' : 'SpellTrap'}Zones .zone:nth-child(${index + 1})`);
+            if (zoneElement) {
+                zoneElement.classList.add('selected');
+            }
+            
+            // 카드 선택 모달 열기
+            showCardSelectModal(zoneType);
+        }
+
+        // 카드 선택 모달 표시
+        function showCardSelectModal(zoneType) {
+            const modal = document.getElementById('cardSelectModal');
+            const grid = document.getElementById('cardSelectGrid');
+            
+            grid.innerHTML = '';
+            
+            // 해당 존에 놓을 수 있는 카드들만 필터링
+            const availableCards = gameState.playerHand.filter(card => {
+                if (zoneType === 'monster') {
+                    return card.type === 'monster';
+                } else {
+                    return card.type === 'magic' || card.type === 'trap';
+                }
+            });
+            
+            if (availableCards.length === 0) {
+                grid.innerHTML = '<p>놓을 수 있는 카드가 없습니다.</p>';
+            } else {
+                availableCards.forEach((card) => {
+                    const cardElement = document.createElement('div');
+                    cardElement.className = `card ${card.type}`;
+                    cardElement.innerHTML = `
+                        <div style="font-weight: bold; font-size: 0.7em;">${card.name}</div>
+                        <div style="font-size: 1.2em;">${card.illustration}</div>
+                        ${card.attack ? `<div>ATK: ${card.attack}</div>` : ''}
+                        ${card.defense ? `<div>DEF: ${card.defense}</div>` : ''}
+                    `;
+                    cardElement.onclick = () => placeCardInZone(card);
+                    grid.appendChild(cardElement);
+                });
+            }
+            
+            modal.style.display = 'flex';
+        }
+
+        // 카드 선택 모달 닫기
+        function closeCardSelect() {
+            document.getElementById('cardSelectModal').style.display = 'none';
+            document.querySelectorAll('.zone').forEach(zone => zone.classList.remove('selected'));
+            gameState.selectedZone = null;
+        }
+
+        // 카드를 존에 배치
+        function placeCardInZone(card) {
+            if (!gameState.selectedZone) return;
+            
+            const { zoneType, index } = gameState.selectedZone;
+            const handIndex = gameState.playerHand.findIndex(c => c.uniqueId === card.uniqueId);
+            
+            if (zoneType === 'monster') {
+                if (card.type !== 'monster') {
+                    alert('몬스터 존에는 몬스터 카드만 놓을 수 있습니다.');
+                    return;
+                }
+                if (!gameState.canSummon) {
+                    alert('이번 턴에는 이미 소환했습니다.');
+                    return;
+                }
+                gameState.playerMonsterField[index] = card;
+                gameState.canSummon = false;
+                addBattleLog(`${card.name}을(를) 소환했습니다! (ATK: ${card.attack})`);
+            } else {
+                if (card.type === 'monster') {
+                    alert('마법/함정 존에는 마법이나 함정 카드만 놓을 수 있습니다.');
+                    return;
+                }
+                gameState.playerSpellTrapField[index] = card;
+                addBattleLog(`${card.name}을(를) 세트했습니다.`);
+                
+                // 마법 카드는 즉시 발동
+                if (card.type === 'magic') {
+                    activateMagicCard(card, index);
+                }
+            }
+            
+            // 손패에서 카드 제거
+            gameState.playerHand.splice(handIndex, 1);
+            
+            closeCardSelect();
+            updateBattleUI();
+        }
+
+        // 마법 카드 발동
+        function activateMagicCard(card, index) {
+            if (card.name === '번개' && gameState.opponentMonsterField.some(c => c)) {
+                const targetIndex = gameState.opponentMonsterField.findIndex(c => c);
+                const target = gameState.opponentMonsterField[targetIndex];
+                gameState.opponentMonsterField[targetIndex] = null;
+                addBattleLog(`${card.name} 발동! ${target.name}을(를) 파괴했습니다!`);
+            } else if (card.name === '어둠의 구멍') {
+                gameState.opponentMonsterField = [null, null, null, null, null];
+                addBattleLog(`${card.name} 발동! 상대 필드의 모든 몬스터를 파괴했습니다!`);
+            } else if (card.name === '강화') {
+                const playerMonsters = gameState.playerMonsterField.filter(c => c);
+                if (playerMonsters.length > 0) {
+                    playerMonsters[0].attack += 1000;
+                    addBattleLog(`${card.name} 발동! ${playerMonsters[0].name}의 공격력이 1000 증가했습니다!`);
+                }
+            }
+            
+            // 마법 카드는 발동 후 제거
+            gameState.playerSpellTrapField[index] = null;
+        }
+
+        // 카드 드로우
+        function drawCard(player) {
+            if (player === 'player' && gameState.playerDeck.length > 0) {
+                const card = gameState.playerDeck.pop();
+                gameState.playerHand.push(card);
+            } else if (player === 'opponent' && gameState.opponentDeck.length > 0) {
+                const card = gameState.opponentDeck.pop();
+                gameState.opponentHand.push(card);
+            }
+        }
+
+        // 턴 종료
+        function endTurn() {
+            gameState.turn = gameState.turn === 'player' ? 'opponent' : 'player';
+            gameState.selectedCard = null;
+            gameState.selectedZone = null;
+            
+            if (gameState.turn === 'player') {
+                drawCard('player');
+                gameState.canSummon = true;
+                addBattleLog('내 턴이 시작되었습니다.');
+            } else {
+                drawCard('opponent');
+                addBattleLog('상대 턴이 시작되었습니다.');
+                // AI 턴 시뮬레이션
+                setTimeout(() => {
+                    aiTurn();
+                }, 1500);
+            }
+            
+            updateBattleUI();
+        }
+
+        // AI 턴 시뮬레이션
+        function aiTurn() {
+            // AI 몬스터 소환
+            const monstersInHand = gameState.opponentHand.filter(card => card.type === 'monster');
+            if (monstersInHand.length > 0) {
+                const emptySlot = gameState.opponentMonsterField.findIndex(slot => !slot);
+                if (emptySlot !== -1) {
+                    const cardToSummon = monstersInHand[0];
+                    gameState.opponentHand = gameState.opponentHand.filter(card => card.uniqueId !== cardToSummon.uniqueId);
+                    gameState.opponentMonsterField[emptySlot] = cardToSummon;
+                    addBattleLog(`상대가 ${cardToSummon.name}을(를) 소환했습니다!`);
+                }
+            }
+            
+            // AI 공격
+            setTimeout(() => {
+                gameState.opponentMonsterField.forEach((monster) => {
+                    if (!monster) return;
+                    
+                    const playerMonsters = gameState.playerMonsterField.filter(c => c);
+                    if (playerMonsters.length > 0) {
+                        // 플레이어 몬스터 공격
+                        const target = playerMonsters[0];
+                        const targetIndex = gameState.playerMonsterField.findIndex(c => c && c.uniqueId === target.uniqueId);
+                        performBattle(monster, target, false, targetIndex);
+                    } else {
+                        // 직접 공격
+                        gameState.playerLP -= monster.attack;
+                        addBattleLog(`${monster.name}의 직접 공격! ${monster.attack} 데미지!`);
+                    }
+                });
+                
+                checkGameEnd();
+                
+                // AI 턴 종료
+                setTimeout(() => {
+                    endTurn();
+                }, 1000);
+            }, 1000);
+        }
+
+        // 몬스터 공격
+        function attackMonster(targetIndex) {
+            if (!gameState.selectedCard || !gameState.opponentMonsterField[targetIndex]) {
+                return;
+            }
+            
+            const attacker = gameState.selectedCard;
+            const target = gameState.opponentMonsterField[targetIndex];
+            
+            performBattle(attacker, target, true, targetIndex);
+        }
+
+        // 전투 수행
+        function performBattle(attacker, target, isPlayerAttacking, targetIndex) {
+            setTimeout(() => {
+                if (attacker.attack > target.attack) {
+                    // 공격 성공
+                    const damage = attacker.attack - target.attack;
+                    if (isPlayerAttacking) {
+                        gameState.opponentLP -= damage;
+                        gameState.opponentMonsterField[targetIndex] = null;
+                    } else {
+                        gameState.playerLP -= damage;
+                        gameState.playerMonsterField[targetIndex] = null;
+                    }
+                    addBattleLog(`${attacker.name}이(가) ${target.name}을(를) 파괴! ${damage} 데미지!`);
+                    
+                } else if (attacker.attack === target.attack) {
+                    // 상쇄
+                    if (isPlayerAttacking) {
+                        gameState.opponentMonsterField[targetIndex] = null;
+                        const attackerIndex = gameState.playerMonsterField.findIndex(card => card && card.uniqueId === attacker.uniqueId);
+                        gameState.playerMonsterField[attackerIndex] = null;
+                    } else {
+                        gameState.playerMonsterField[targetIndex] = null;
+                        const attackerIndex = gameState.opponentMonsterField.findIndex(card => card && card.uniqueId === attacker.uniqueId);
+                        gameState.opponentMonsterField[attackerIndex] = null;
+                    }
+                    addBattleLog(`${attacker.name}과(와) ${target.name}이(가) 상쇄되었습니다!`);
+                    
+                } else {
+                    // 공격 실패
+                    const damage = target.attack - attacker.attack;
+                    if (isPlayerAttacking) {
+                        gameState.playerLP -= damage;
+                        const attackerIndex = gameState.playerMonsterField.findIndex(card => card && card.uniqueId === attacker.uniqueId);
+                        gameState.playerMonsterField[attackerIndex] = null;
+                    } else {
+                        gameState.opponentLP -= damage;
+                        const attackerIndex = gameState.opponentMonsterField.findIndex(card => card && card.uniqueId === attacker.uniqueId);
+                        gameState.opponentMonsterField[attackerIndex] = null;
+                    }
+                    addBattleLog(`${attacker.name}이(가) 파괴되었습니다! ${damage} 데미지를 받았습니다!`);
+                }
+                
+                gameState.selectedCard = null;
+                checkGameEnd();
+                updateBattleUI();
+            }, 500);
+        }
+
+        // 직접 공격
+        function directAttack() {
+            if (!gameState.selectedCard || gameState.opponentMonsterField.some(c => c)) return;
+            
+            const attacker = gameState.selectedCard;
+            gameState.opponentLP -= attacker.attack;
+            addBattleLog(`${attacker.name}의 직접 공격! ${attacker.attack} 데미지!`);
+            
+            gameState.selectedCard = null;
+            checkGameEnd();
+            updateBattleUI();
+        }
+
+        // 게임 종료 체크
+        function checkGameEnd() {
+            if (gameState.playerLP <= 0) {
+                alert('패배했습니다!');
+                showScreen('dashboard');
+                return true;
+            }
+            
+            if (gameState.opponentLP <= 0) {
+                alert('승리했습니다!');
+                if (gameState.currentStage > gameState.clearedStages) {
+                    gameState.clearedStages = gameState.currentStage;
+                    // 승리 보너스 팩 지급
+                    gameState.bonusPackCount++;
+                    addBattleLog('승리 보너스 팩을 획득했습니다!');
+                }
+                showScreen('dashboard');
+                return true;
+            }
+            
+            return false;
+        }
+
+        // 배틀 로그 추가
+        function addBattleLog(message) {
+            const log = document.getElementById('battleLog');
+            if (log) {
+                log.innerHTML += message + '<br>';
+                log.scrollTop = log.scrollHeight;
+            }
+        }
+
+        // 배틀 UI 업데이트
+        function updateBattleUI() {
+            document.getElementById('playerLP').textContent = gameState.playerLP;
+            document.getElementById('opponentLP').textContent = gameState.opponentLP;
+            document.getElementById('currentStage').textContent = gameState.currentStage;
+            document.getElementById('phaseIndicator').textContent = gameState.turn === 'player' ? '내 턴' : '상대 턴';
+            
+            // 플레이어 패 표시
+            const handContainer = document.getElementById('playerHand');
+            handContainer.innerHTML = '';
+            
+            gameState.playerHand.forEach((card) => {
+                const cardElement = document.createElement('div');
+                cardElement.className = `card ${card.type}`;
+                cardElement.innerHTML = `
+                    <div style="font-weight: bold; font-size: 0.7em;">${card.name}</div>
+                    <div style="font-size: 1.2em;">${card.illustration}</div>
+                    ${card.attack ? `<div>ATK: ${card.attack}</div>` : ''}
+                    ${card.defense ? `<div>DEF: ${card.defense}</div>` : ''}
+                `;
+                handContainer.appendChild(cardElement);
+            });
+            
+            // 필드 업데이트
+            updateFieldDisplay();
+            
+            // 버튼 상태 업데이트
+            document.getElementById('endTurnBtn').disabled = gameState.turn !== 'player';
+            
+            // 직접 공격 버튼
+            const directAttackBtn = document.getElementById('directAttackBtn');
+            if (gameState.selectedCard && !gameState.opponentMonsterField.some(c => c)) {
+                directAttackBtn.style.display = 'inline-block';
+            } else {
+                directAttackBtn.style.display = 'none';
+            }
+        }
+
+        // 필드 표시 업데이트
+        function updateFieldDisplay() {
+            // 플레이어 몬스터 존
+            const playerMonsterZones = document.getElementById('playerMonsterZones');
+            playerMonsterZones.querySelectorAll('.zone').forEach((zone, index) => {
+                const card = gameState.playerMonsterField[index];
+                if (card) {
+                    zone.innerHTML = `
+                        <div class="card monster ${gameState.selectedCard && gameState.selectedCard.uniqueId === card.uniqueId ? 'selected' : ''}">
+                            <div style="font-weight: bold; font-size: 0.7em;">${card.name}</div>
+                            <div style="font-size: 1em;">${card.illustration}</div>
+                            <div>ATK: ${card.attack}</div>
+                        </div>
+                    `;
+                    zone.classList.add('occupied');
+                } else {
+                    zone.innerHTML = '몬스터 존';
+                    zone.classList.remove('occupied');
+                }
+            });
+            
+            // 플레이어 마법/함정 존
+            const playerSpellTrapZones = document.getElementById('playerSpellTrapZones');
+            playerSpellTrapZones.querySelectorAll('.zone').forEach((zone, index) => {
+                const card = gameState.playerSpellTrapField[index];
+                if (card) {
+                    zone.innerHTML = `
+                        <div class="card ${card.type}">
+                            <div style="font-weight: bold; font-size: 0.7em;">${card.name}</div>
+                            <div style="font-size: 1em;">${card.illustration}</div>
+                        </div>
+                    `;
+                    zone.classList.add('occupied');
+                } else {
+                    zone.innerHTML = '마법/함정';
+                    zone.classList.remove('occupied');
+                }
+            });
+            
+            // 상대 몬스터 존
+            const opponentMonsterZones = document.getElementById('opponentMonsterZones');
+            opponentMonsterZones.querySelectorAll('.zone').forEach((zone, index) => {
+                const card = gameState.opponentMonsterField[index];
+                if (card) {
+                    zone.innerHTML = `
+                        <div class="card monster">
+                            <div style="font-weight: bold; font-size: 0.7em;">${card.name}</div>
+                            <div style="font-size: 1em;">${card.illustration}</div>
+                            <div>ATK: ${card.attack}</div>
+                        </div>
+                    `;
+                    zone.classList.add('occupied');
+                } else {
+                    zone.innerHTML = '몬스터 존';
+                    zone.classList.remove('occupied');
+                }
+            });
+            
+            // 상대 마법/함정 존
+            const opponentSpellTrapZones = document.getElementById('opponentSpellTrapZones');
+            opponentSpellTrapZones.querySelectorAll('.zone').forEach((zone, index) => {
+                const card = gameState.opponentSpellTrapField[index];
+                if (card) {
+                    zone.innerHTML = `
+                        <div class="card ${card.type}">
+                            <div style="font-weight: bold; font-size: 0.7em;">${card.name}</div>
+                            <div style="font-size: 1em;">${card.illustration}</div>
+                        </div>
+                    `;
+                    zone.classList.add('occupied');
+                } else {
+                    zone.innerHTML = '마법/함정';
+                    zone.classList.remove('occupied');
+                }
+            });
+        }
+
+        // UI 업데이트
+        function updateUI() {
+            document.getElementById('cardCount').textContent = gameState.collection.length;
+            document.getElementById('clearedStages').textContent = gameState.clearedStages;
+            document.getElementById('bonusPackCount').textContent = gameState.bonusPackCount;
+            updateBonusPackDisplay();
+        }
+
+        // 컬렉션 보기
+        function showCollection() {
+            if (gameState.collection.length === 0) {
+                alert('보유한 카드가 없습니다. 카드 팩을 먼저 열어보세요!');
+                return;
+            }
+            
+            let collectionText = '보유 카드 목록:\n\n';
+            gameState.collection.forEach((card, index) => {
+                collectionText += `${index + 1}. ${card.illustration} ${card.name} (${card.type})`;
+                if (card.attack) collectionText += ` - ATK: ${card.attack}`;
+                collectionText += '\n';
+            });
+            
+            alert(collectionText);
+        }
+
+        // 페이지 로드 시 초기화 - 대시보드가 기본 화면으로 설정됨
+        document.addEventListener('DOMContentLoaded', function() {
+            updateUI();
+        });
+    </script>
+</body>
+</html>
